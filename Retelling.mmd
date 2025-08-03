@@ -1,0 +1,23 @@
+graph TD
+    subgraph "用户交互与前端"
+        A[用户前端: 句子卡片练习] --> B[用户点击提交卡片]
+        B --> C[FastAPI 端点: /evaluate-single-card]
+        C --> D[前端立即显示卡片N+1]
+        D --> E[用户点击查看报告]
+        E --> F[FastAPI 端点: /get-round-summary/round_id]
+    end
+    subgraph "FastAPI 后端服务: 异步处理与内存缓存"
+        C --> G[后台任务: 单卡片分析]
+        G --> H[并行转录原句和复述句音频<br/>获取详细时间戳]
+        H --> I[计算 missing_words]
+        I --> J[构建 Gemini Prompt<br/>包含两份完整的 ASR 数据]
+        J --> K[调用 Google Gemini API]
+        K --> L[将评测报告存入内存字典<br/>EVALUATION_CACHE]
+    end
+    subgraph "FastAPI 后端服务: 汇总报告生成"
+        F --> M[从内存字典获取所有卡片报告<br/>EVALUATION_CACHE]
+        M --> N[构建 Gemini 汇总 Prompt<br/>包含所有卡片对比数据]
+        N --> O[调用 Google Gemini API]
+        O --> P[返回 JSON 格式汇总报告]
+        P --> Q[可选: 清理内存中该轮次数据]
+    end

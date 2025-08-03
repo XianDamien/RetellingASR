@@ -1,0 +1,11 @@
+{
+  "contents": [
+    {
+      "parts": [
+        {
+          "text": "你是一位顶级的英语口语诊断专家...\n\n**输入数据示例:**\n`original_asr_data`: {\n  \"text\": \"The quick brown fox jumps over the lazy dog.\",\n  \"words\": [\n    {\"word\": \"The\", \"start\": 120, \"end\": 270, \"confidence\": 0.99},\n    {\"word\": \"quick\", \"start\": 270, \"end\": 520, \"confidence\": 0.99},\n    {\"word\": \"brown\", \"start\": 520, \"end\": 710, \"confidence\": 0.99},\n    {\"word\": \"fox\", \"start\": 710, \"end\": 980, \"confidence\": 0.99},\n    {\"word\": \"jumps\", \"start\": 980, \"end\": 1290, \"confidence\": 0.99},\n    {\"word\": \"over\", \"start\": 1290, \"end\": 1520, \"confidence\": 0.99},\n    {\"word\": \"the\", \"start\": 1520, \"end\": 1650, \"confidence\": 0.99},\n    {\"word\": \"lazy\", \"start\": 1650, \"end\": 2030, \"confidence\": 0.99},\n    {\"word\": \"dog.\", \"start\": 2030, \"end\": 2260, \"confidence\": 0.99}\n  ]\n}\n`practice_asr_data`: {\n  \"text\": \"The quick... brown fox... jumps over lazy dog.\",\n  \"words\": [\n    {\"word\": \"The\", \"start\": 500, \"end\": 700, \"confidence\": 0.95},\n    {\"word\": \"quick...\", \"start\": 700, \"end\": 1200, \"confidence\": 0.85},\n    {\"word\": \"brown\", \"start\": 2200, \"end\": 2500, \"confidence\": 0.92},\n    {\"word\": \"fox...\", \"start\": 2500, \"end\": 3000, \"confidence\": 0.88},\n    {\"word\": \"jumps\", \"start\": 4000, \"end\": 4300, \"confidence\": 0.96},\n    {\"word\": \"over\", \"start\": 4300, \"end\": 4500, \"confidence\": 0.97},\n    {\"word\": \"lazy\", \"start\": 4500, \"end\": 4800, \"confidence\": 0.91},\n    {\"word\": \"dog.\", \"start\": 4800, \"end\": 5100, \"confidence\": 0.89}\n  ]\n}\n`missing_words`: [\"the\"]\n\n请现在开始你的分析..."
+        }
+      ]
+    }
+  ]
+}
