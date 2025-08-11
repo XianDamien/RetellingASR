@@ -1,7 +1,7 @@
 # main.py (理念对齐最终版)
 
 import assemblyai as aai
-import google.generativeai as genai
+from google import genai
 import asyncio
 import json
 import os
@@ -13,7 +13,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uuid
 import uvicorn
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 # --- 1. 定义所有配置变量 ---
 DB_FILE = "evaluation_jobs.db"
@@ -31,31 +30,19 @@ if ASSEMBLYAI_API_KEY and not ASSEMBLYAI_API_KEY.startswith("在此处"):
 else:
     logging.warning("⚠️ AssemblyAI API 密钥未正确设置")
 
+# --- 4. 创建全局客户端 ---
+transcriber_client = aai.Transcriber() if aai.settings.api_key else None
+gemini_client = None
 if GEMINI_API_KEY and not GEMINI_API_KEY.startswith("在此处"):
-    genai.configure(api_key=GEMINI_API_KEY)
+    gemini_client = genai.Client(api_key=GEMINI_API_KEY)
     logging.info("✅ Gemini API 密钥已配置")
 else:
     logging.warning("⚠️ Gemini API 密钥未正确设置")
 
-# --- 4. 创建全局客户端 ---
-transcriber_client = aai.Transcriber() if aai.settings.api_key else None
-gemini_model = None
-if GEMINI_API_KEY and not GEMINI_API_KEY.startswith("在此处"):
-    safety_settings = {
-        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-    }
-    gemini_model = genai.GenerativeModel(
-        GEMINI_MODEL_NAME,
-        safety_settings=safety_settings
-    )
-
 if not transcriber_client:
     logging.warning("AssemblyAI 客户端未创建，因为 API 密钥未设置。")
-if not gemini_model:
-    logging.warning("Gemini 模型客户端未创建，因为 API 密钥未设置。")
+if not gemini_client:
+    logging.warning("Gemini 客户端未创建，因为 API 密钥未设置。")
 
 # --- 5. 数据库初始化 ---
 def init_db():
@@ -148,7 +135,7 @@ async def process_and_store_evaluation(practice_audio_path: str, original_audio_
         return
 
     try:
-        if not transcriber_client or not gemini_model:
+        if not transcriber_client or not gemini_client:
             raise Exception("API clients are not initialized due to missing keys.")
 
         logging.info(f"[{round_id}/{card_id}] 开始并行转录音频...")
@@ -167,14 +154,13 @@ async def process_and_store_evaluation(practice_audio_path: str, original_audio_
         prompt = build_single_card_gemini_prompt(original_asr_data, practice_asr_data)
         
         logging.info(f"[{round_id}/{card_id}] 开始调用 Gemini API (超时设置为120秒)...")
-        request_options = {"timeout": 120} 
-        response = await gemini_model.generate_content_async(
-            prompt,
-            request_options=request_options
+        response = await gemini_client.aio.models.generate_content(
+            model=GEMINI_MODEL_NAME,
+            contents=prompt
         )
         logging.info(f"[{round_id}/{card_id}] Gemini API 调用成功返回。")
         
-        cleaned_response = response.text.strip().lstrip("```json").rstrip("```").strip()
+        cleaned_response = response.candidates[0].content.parts[0].text.strip().lstrip("```json").rstrip("```").strip()
         evaluation_report = json.loads(cleaned_response)
 
         # 【已更新】存储的数据中不再包含多余的 source_data.missing_words
@@ -338,22 +324,21 @@ async def get_round_summary(round_id: str):
     """
     
     logging.info(f"[{round_id}] 构建宏观汇总 Prompt 并调用 Gemini...")
-    if not gemini_model:
+    if not gemini_client:
         raise HTTPException(status_code=503, detail="Gemini client is not available.")
 
     try:
         logging.info(f"[{round_id}] 开始调用 Gemini API for summary (超时设置为180秒)...")
-        request_options = {"timeout": 180}
-        response = await gemini_model.generate_content_async(
-            summary_prompt,
-            request_options=request_options
+        response = await gemini_client.aio.models.generate_content(
+            model=GEMINI_MODEL_NAME,
+            contents=summary_prompt
         )
         logging.info(f"[{round_id}] Gemini summary API 调用成功返回。")
     except Exception as e:
         logging.error(f"[{round_id}] 生成汇总报告时 Gemini 调用失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to generate summary from Gemini: {e}")
 
-    cleaned_response = response.text.strip().lstrip("```json").rstrip("```").strip()
+    cleaned_response = response.candidates[0].content.parts[0].text.strip().lstrip("```json").rstrip("```").strip()
     return json.loads(cleaned_response)
 
 # --- 启动应用 ---
